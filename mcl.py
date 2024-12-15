@@ -224,7 +224,7 @@ def download(version_name):
             lzma_compressed = False
         queue_download(item_url, path, lzma_compressed)
 
-    assets_manifest = get_manifest(Path("assets")/"indexes"/f"{version_manifest["assets"]}.json", version_manifest["assetIndex"]["url"])
+    assets_manifest = get_manifest(Path("assets")/"indexes"/f"{version_manifest['assets']}.json", version_manifest["assetIndex"]["url"])
 
     objects_path = Path("assets")/"objects"
     for object in assets_manifest["objects"].values():
@@ -260,7 +260,7 @@ def check_if_account_information_changed(account, accounts):
     def account_information_changed():
         if username != account["username"] or uuid != account["uuid"]:
             print("Account information changed.")
-            print(f"Old: {account["uuid"]!r} {account["username"]!r}")
+            print(f"Old: {account['uuid']!r} {account['username']!r}")
             print(f"New: {uuid!r} {username!r}")
             account["username"] = username
             account["uuid"] = uuid
@@ -356,7 +356,7 @@ def launch(version_name, username_or_uuid):
         "${auth_access_token}": account["minecraft_token"],
         "${user_properties}": "{}",
         "${user_type}": "msa",
-        "${auth_session}": f"token:{account["minecraft_token"]}:{account["uuid"]}",
+        "${auth_session}": f"token:{account['minecraft_token']}:{account['uuid']}",
         "${version_type}": version_manifest["type"],
         "${natives_directory}": natives_path,
         "${classpath}": lib_jar_paths,
