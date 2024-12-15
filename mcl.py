@@ -4,6 +4,7 @@
 # Only Minecraft java edition is supported.
 # Accounts are stored in 'accounts.json'.
 # The launcher/game creates files where mcl.py is located, so you may want to put mcl.py in an empty folder to keep things organized.
+# Python 3.8+
 
 HELP = """
 mcl.py
