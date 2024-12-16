@@ -19,12 +19,14 @@ mcl.py launch <version> [account]
 mcl.py l <version> [account]
 Download specified <version> if not already downloaded, refresh Minecraft token if expired and launch the game. [account] can be a username or UUID. If [account] is not specified, the first account found in accounts.json is used. If no account is found, you will be asked to login.
 Example: mcl.py launch 1.8.9
-Example: mcl.py launch 1.8.9 notch
+Example: mcl.py launch 1.12.2 notch
+Example: mcl.py l 1.21.4
 
 mcl.py download <version>
 mcl.py d <version>
 Download specified <version> if not already downloaded.
 Example: mcl.py download 1.8.9
+Example: mcl.py d 1.12.2
 
 mcl.py accounts
 List accounts in accounts.json
