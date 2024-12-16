@@ -16,11 +16,13 @@ If [code] is not specified, show link to Microsoft login page where you should l
 Example: mcl.py login M.C507_BL2.2.U.dbf86d81-7aab-abd6-9c7d-12a04a49221b
 
 mcl.py launch <version> [account]
+mcl.py l <version> [account]
 Download specified <version> if not already downloaded, refresh Minecraft token if expired and launch the game. [account] can be a username or UUID. If [account] is not specified, the first account found in accounts.json is used. If no account is found, you will be asked to login.
 Example: mcl.py launch 1.8.9
 Example: mcl.py launch 1.8.9 notch
 
 mcl.py download <version>
+mcl.py d <version>
 Download specified <version> if not already downloaded.
 Example: mcl.py download 1.8.9
 
@@ -470,10 +472,10 @@ def ensure_logged_in():
 
 if __name__ == "__main__":
     sys.argv += [None]*3
-    if sys.argv[1] == "launch":
+    if sys.argv[1] == "launch" or sys.argv[1] == "l":
         ensure_logged_in()
         launch(sys.argv[2], sys.argv[3])
-    elif sys.argv[1] == "download":
+    elif sys.argv[1] == "download" or sys.argv[1] == "d":
         ensure_logged_in()
         download(sys.argv[2])
     elif sys.argv[1] == "login":
