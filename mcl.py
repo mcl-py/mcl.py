@@ -11,8 +11,9 @@ mcl.py
 mcl.py help
 Show this help message.
 
-mcl.py login [code]
-If [code] is not specified, show link to Microsoft login page where you should login. After logging in, you will be redirected to a blank page that contains a code in the URL. Use the code in this command to add an account to the launcher.
+mcl.py login <code>
+Login at https://login.live.com/oauth20_authorize.srf?client_id=00000000402B5328&redirect_uri=https://login.live.com/oauth20_desktop.srf&response_type=code&scope=service::user.auth.xboxlive.com::MBI_SSL
+After logging in, you will be redirected to a blank page that contains a code in the URL. Use the code in this command to add an account to the launcher.
 Example: mcl.py login M.C507_BL2.2.U.dbf86d81-7aab-abd6-9c7d-12a04a49221b
 
 mcl.py launch <version> [account]
@@ -483,10 +484,8 @@ if __name__ == "__main__":
     elif sys.argv[1] == "login":
         code = sys.argv[2]
         if code is None:
-            print("Login at https://login.live.com/oauth20_authorize.srf?client_id=00000000402B5328&redirect_uri=https://login.live.com/oauth20_desktop.srf&response_type=code&scope=service::user.auth.xboxlive.com::MBI_SSL")
-            print("After logging in, you will be redirected to a blank page that contains a code in the URL. Use the code in the login command to add an account to the launcher.")
-        else:
-            login(code)
+            raise ValueError("Expected code")
+        login(code)
     elif sys.argv[1] == "accounts":
         for account in json.loads(Path("accounts.json").read_text()):
             print(account["uuid"], account["username"])
