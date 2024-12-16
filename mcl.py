@@ -2,7 +2,7 @@
 # License: do whatever you want.
 # This code respects Minecraft rules. A Minecraft account is needed to use it.
 # Only Minecraft java edition is supported.
-# Accounts are stored in 'accounts.json'.
+# Accounts are stored in 'accounts.json' as [{"username":"example", "uuid":"00112233445566778899aabbccddeeff", "minecraft_token": "...", "microsoft_refresh_token":"..."}]
 # The launcher/game creates files where mcl.py is located, so you may want to put mcl.py in an empty folder to keep things organized.
 # Python 3.8+
 
