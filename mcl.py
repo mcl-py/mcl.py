@@ -51,7 +51,7 @@ from pathlib import Path
 import platform
 import subprocess
 from threading import Thread
-from time import sleep,time
+from time import sleep
 from lzma import LZMADecompressor
 from zipfile import ZipFile
 import traceback
