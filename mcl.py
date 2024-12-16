@@ -39,7 +39,7 @@ mcl.py manifest
 Download version manifest and list all Minecraft versions with their release dates.
 
 mcl.py refresh <account>
-Resfresh the Minecraft token of the specified <account> if it has expired. [account] can be a username or UUID.
+Resfresh the Minecraft token of the specified <account> if it has expired. <account> can be a username or UUID.
 """
 
 import sys
