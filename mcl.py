@@ -13,8 +13,9 @@ Show this help message.
 
 mcl.py login <code>
 Login at https://login.live.com/oauth20_authorize.srf?client_id=00000000402B5328&redirect_uri=https://login.live.com/oauth20_desktop.srf&response_type=code&scope=service::user.auth.xboxlive.com::MBI_SSL
-After logging in, you will be redirected to a blank page that contains a code in the URL. Use the code in this command to add an account to the launcher.
+After logging in, you will be redirected to a blank page that contains a code in the URL. Paste the code (or the whole URL) in this command to add an account to the launcher. If you paste an URL, it may need to be between quotes.
 Example: mcl.py login M.C507_BL2.2.U.dbf86d81-7aab-abd6-9c7d-12a04a49221b
+Example: mcl.py login "https://login.live.com/oauth20_desktop.srf?code=M.C507_BL2.2.U.dbf86d81-7aab-abd6-9c7d-12a04a49221b&lc=1033"
 
 mcl.py launch <version> [account]
 mcl.py l <version> [account]
@@ -452,6 +453,7 @@ def minecraft_token_to_username_and_uuid(minecraft_token):
     return username, uuid
 
 def login(code):
+    code = code.split("code=")[1].split("&")[0] # filter if code is a url
     microsoft_token, microsoft_refresh_token = microsoft_login_code_to_microsoft_token_and_microsoft_refresh_token(code)
     minecraft_token = microsoft_token_to_minecraft_token(microsoft_token)
     username, uuid = minecraft_token_to_username_and_uuid(minecraft_token)
