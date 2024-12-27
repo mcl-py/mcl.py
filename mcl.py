@@ -2,7 +2,9 @@
 # License: do whatever you want.
 # This code respects Minecraft rules. A Minecraft account is needed to use it.
 # Only Minecraft java edition is supported.
-# Accounts are stored in 'accounts.json' as [{"username":"example", "uuid":"00112233445566778899aabbccddeeff", "minecraft_token": "...", "microsoft_refresh_token":"..."}]
+# Accounts are stored in 'accounts.json as a list of account objects: [{...},{...},{...},...]
+# Microsoft accounts are stored as {"username":"...", "uuid":"...", "minecraft_token": "...", "microsoft_refresh_token":"..."}
+#   Offline accounts are stored as {"username":"...", "uuid":"...", "minecraft_token": "..."}
 # The launcher/game creates files where mcl.py is located, so you may want to put mcl.py in an empty folder to keep things organized.
 # Python 3.8+
 
@@ -13,34 +15,22 @@ Show this help message.
 
 mcl.py login <code>
 Login at https://login.live.com/oauth20_authorize.srf?client_id=00000000402B5328&redirect_uri=https://login.live.com/oauth20_desktop.srf&response_type=code&scope=service::user.auth.xboxlive.com::MBI_SSL
-After logging in, you will be redirected to a blank page that contains a code in the URL. Paste the code (or the whole URL) in this command to add an account to the launcher. If you paste an URL, it may need to be between quotes.
+After logging in, you will be redirected to a blank page that contains a code in the URL. Paste the code (or the whole URL) in this command to add an account to the launcher. If you paste the URL, it may need to be between quotes.
 Example: mcl.py login M.C507_BL2.2.U.dbf86d81-7aab-abd6-9c7d-12a04a49221b
 Example: mcl.py login "https://login.live.com/oauth20_desktop.srf?code=M.C507_BL2.2.U.dbf86d81-7aab-abd6-9c7d-12a04a49221b&lc=1033"
 
-mcl.py launch <version> [account]
-mcl.py l <version> [account]
-Download specified <version> if not already downloaded, refresh Minecraft token if expired and launch the game. [account] can be a username or UUID. If [account] is not specified, the first account found in accounts.json is used. If no account is found, you will be asked to login.
-Example: mcl.py launch 1.8.9
-Example: mcl.py launch 1.12.2 notch
-Example: mcl.py l 1.21.4
+mcl.py add <instance> <instance_name>
+Add <instance> to the launcher. <instance> can be a version. <instance_name> will be the name of the instance directory created in the 'instances' directory.
+Example: mcl.py add 1.8.9 189
+Example: mcl.py add 1.12.2 "My special 1.12.2 instance"
 
-mcl.py download <version>
-mcl.py d <version>
-Download specified <version> if not already downloaded.
-Example: mcl.py download 1.8.9
-Example: mcl.py d 1.12.2
-
-mcl.py accounts
-List accounts in accounts.json
-
-mcl.py versions
-List Minecraft versions in the 'versions' directory.
-
-mcl.py manifest
-Download version manifest and list all Minecraft versions with their release dates.
+mcl.py run <instance_name> [account]
+Refresh Minecraft token if expired and run <instance_name>. [account] can be an username or UUID. If [account] is not specified, the first account found in accounts.json is used. If no account is found, you will be asked to login.
+Example: mcl.py run 189
+Example: mcl.py run "My special 1.12.2 instance" notch
 
 mcl.py refresh <account>
-Resfresh the Minecraft token of the specified <account> if it has expired. <account> can be a username or UUID.
+Refresh the Minecraft token of <account> if it has expired. <account> can be a username or UUID.
 """
 
 import sys
@@ -104,7 +94,18 @@ def get_runtime_os_name():
     else:
         raise NotImplementedError
 
-def download(version_name):
+def add():
+    ensure_logged_in()
+    
+    instance = sys.argv[2]
+    instance_name = sys.argv[3]
+    version_name = instance
+    
+    if instance_name is None:
+        raise ValueError("Expected <instance_name>")
+    
+    instance_path = Path("instances")/instance_name
+    
     current_download_count = 0
     total_download_count = 0
 
@@ -124,12 +125,12 @@ def download(version_name):
         except FileNotFoundError:
             return get_manifest_from_url(path, url)
 
-    version_manifest_path = Path("versions")/version_name/f"{version_name}.json"
+    version_manifest_path = Path("manifests")/"net.minecraft"/f"{version_name}.json"
 
     try:
         version_manifest = json.loads(version_manifest_path.read_text())
     except FileNotFoundError:
-        versions_manifest = get_manifest(Path("versions")/"versions_manifest.json", VERSIONS_MANIFEST_URL)
+        versions_manifest = get_manifest(Path("manifests")/"net.minecraft"/"versions.json", VERSIONS_MANIFEST_URL)
         version_manifest_url = next(e["url"] for e in versions_manifest["versions"] if e["id"] == version_name)
         version_manifest = get_manifest_from_url(version_manifest_path, version_manifest_url)
 
@@ -162,12 +163,12 @@ def download(version_name):
                 print(f"{current_download_count}/{total_download_count}", path)
 
 
-    client_jar_path = Path("versions")/version_name/f"{version_name}.jar"
+    client_jar_path = Path(f"libraries/net/minecraft/client/{version_name}.jar")
     if not client_jar_path.exists():
         client_jar_url = version_manifest["downloads"]["client"]["url"]
         queue_download(client_jar_url, client_jar_path)
 
-    natives_path = Path("versions")/version_name/"natives"
+    natives_path = Path("instances")/instance_name/"natives"
     natives_path.mkdir(parents=True, exist_ok=True)
     native_jar_paths = []
 
@@ -197,6 +198,10 @@ def download(version_name):
 
         queue_download(library_url, library_path)
 
+    
+    (Path("instances")/instance_name/"instance.json").write_text(json.dumps({"version":instance}))
+    
+    
     threads = []
     for i in range(6):
         t = Thread(target=download_file_thread)
@@ -205,13 +210,13 @@ def download(version_name):
 
     full_runtime_name = f"{get_runtime_name(version_manifest)}-{get_runtime_os_name()}"
 
-    runtime_manifest_path = Path("runtimes")/full_runtime_name/f"{full_runtime_name}.json"
+    runtime_manifest_path = Path(f"runtimes/net.minecraft.java/{full_runtime_name}.json")
     try:
         runtime_manifest = json.loads(runtime_manifest_path.read_text())
     except FileNotFoundError:
-        runtimes_manifest = get_manifest(Path("runtimes")/"runtimes_manifest.json", RUNTIMES_MANIFEST_URL)
+        runtimes_manifest = get_manifest(Path("manifests/net.minecraft.java/runtimes.json"), RUNTIMES_MANIFEST_URL)
         runtime_manifest_url = next(v[0]["manifest"]["url"] for k,v in runtimes_manifest[get_runtime_os_name()].items() if k == get_runtime_name(version_manifest))
-        runtime_manifest = get_manifest_from_url(runtime_manifest_path, runtime_manifest_url)
+        runtime_manifest = get_manifest_from_url(Path(f"manifests/net.minecraft.java/{full_runtime_name}.json"), runtime_manifest_url)
 
     chmod_bin_java = False
 
@@ -262,7 +267,7 @@ def check_if_account_information_changed(account, accounts):
                 e["username"] = account["username"]
                 e["uuid"] = account["uuid"]
                 e["minecraft_token"] = account["minecraft_token"]
-        Path("accounts.json").write_text(json.dumps(accounts))
+        Path("accounts.json").write_text(json.dumps(accounts, indent=2))
 
     def account_information_changed():
         if username != account["username"] or uuid != account["uuid"]:
@@ -317,9 +322,23 @@ def find_account(username_or_uuid, accounts):
         e.add_note(f"Account {username_or_uuid!r} not found in accounts.json")
         raise e
 
-def launch(version_name, username_or_uuid):
-    print("Checking if any file is missing...")
-    download(version_name)
+def run():
+    ensure_logged_in()
+    
+    instance_name = sys.argv[2]
+    username_or_uuid = sys.argv[3]
+    
+    instance_path = Path("instances")/instance_name
+    
+    if not instance_path.is_dir():
+        print("Instance not found")
+        return
+    
+    instance_manifest = json.loads((instance_path/"instance.json").read_text())
+    
+    version_name = instance_manifest["version"]
+    
+    #print("Checking if any file is missing...")
 
     accounts = json.loads(Path("accounts.json").read_text())
 
@@ -331,15 +350,18 @@ def launch(version_name, username_or_uuid):
 
     print("Using account:", account["uuid"], account["username"])
 
-    print("Checking if account information has changed...")
-    check_if_account_information_changed(account, accounts)
+    if "microsoft_refresh_token" not in account:
+        print("Offline mode.")
+    else:
+        print("Checking if account information has changed...")
+        check_if_account_information_changed(account, accounts)
 
-    version_manifest = json.loads((Path("versions")/version_name/f"{version_name}.json").read_text())
+    version_manifest = json.loads((Path(f"manifests/net.minecraft/{version_name}.json").read_text()))
 
     runtime_dir_path = Path("runtimes")/f"{get_runtime_name(version_manifest)}-{get_runtime_os_name()}"
     java_executable_path = (runtime_dir_path/"bin"/("javaw" if os_name == "windows" else "java")).resolve()
-    natives_path = str((Path("versions")/version_name/"natives").resolve())
-    client_jar_path = (Path("versions")/version_name/f"{version_name}.jar").resolve()
+    natives_path = str((instance_path/"natives").resolve())
+    client_jar_path = Path(f"libraries/net/minecraft/client/{version_name}.jar").resolve()
 
     lib_jar_paths = []
     for library in version_manifest["libraries"]:
@@ -356,19 +378,19 @@ def launch(version_name, username_or_uuid):
     arg_vars = {
         "${auth_player_name}": account["username"],
         "${version_name}": version_name,
-        "${game_directory}": str(Path("").resolve()),
+        "${game_directory}": str(instance_path.resolve()),
         "${assets_root}": str(Path("assets").resolve()),
         "${assets_index_name}": version_manifest["assetIndex"]["id"],
         "${auth_uuid}": account["uuid"],
-        "${auth_access_token}": account["minecraft_token"],
         "${user_properties}": "{}",
         "${user_type}": "msa",
-        "${auth_session}": f"token:{account['minecraft_token']}:{account['uuid']}",
         "${version_type}": version_manifest["type"],
         "${natives_directory}": natives_path,
         "${classpath}": lib_jar_paths,
+        "${auth_access_token}": account["minecraft_token"],
+        "${auth_session}": f"token:{account['minecraft_token']}:{account['uuid']}",
     }
-
+    
     def process_args(args):
         processed_args = []
         for i,arg in enumerate(list(args)):
@@ -428,7 +450,7 @@ def microsoft_refresh_token_to_microsoft_token(microsoft_refresh_token):
     return microsoft_token
 
 def microsoft_token_to_minecraft_token(microsoft_token):
-    r = json.load(urlopen(Request(method="POST", url="https://user.auth.xboxlive.com/user/authenticate", data=('{"Properties": {"AuthMethod": "RPS", "SiteName": "user.auth.xboxlive.com", "RpsTicket": "%s"}, "RelyingParty": "http://auth.xboxlive.com", "TokenType": "JWT"}' % microsoft_token).encode(), headers={"Content-Type":"application/json"})))
+    r = json.load(urlopen(Request(method="POST", url="https://user.auth.xboxlive.com/user/authenticate", data=('{"Properties":{"AuthMethod":"RPS","SiteName":"user.auth.xboxlive.com","RpsTicket":"%s"},"RelyingParty":"http://auth.xboxlive.com","TokenType":"JWT"}' % microsoft_token).encode(), headers={"Content-Type":"application/json"})))
     xbl_token = r["Token"]
 
     r = json.load(urlopen(Request(method="POST", url="https://xsts.auth.xboxlive.com/xsts/authorize", data=('{"Properties":{"SandboxId":"RETAIL","UserTokens":["%s"]},"RelyingParty":"rp://api.minecraftservices.com/","TokenType":"JWT"}' % xbl_token).encode(), headers={"Content-Type":"application/json"})))
@@ -452,7 +474,10 @@ def minecraft_token_to_username_and_uuid(minecraft_token):
     uuid = r["id"]
     return username, uuid
 
-def login(code):
+def login():
+    code = sys.argv[2]
+    if code is None:
+        raise ValueError("Expected code in login command")
     code = code.split("code=")[1].split("&")[0] # filter if code is a url
     microsoft_token, microsoft_refresh_token = microsoft_login_code_to_microsoft_token_and_microsoft_refresh_token(code)
     minecraft_token = microsoft_token_to_minecraft_token(microsoft_token)
@@ -467,7 +492,7 @@ def login(code):
                 accounts.remove(account)
                 break
     accounts.append({"username": username, "uuid": uuid, "minecraft_token": minecraft_token, "microsoft_refresh_token": microsoft_refresh_token})
-    Path("accounts.json").write_text(json.dumps(accounts))
+    Path("accounts.json").write_text(json.dumps(accounts, indent=2))
 
     print("Login successful:", uuid, username)
 
@@ -475,33 +500,14 @@ def ensure_logged_in():
     if not Path("accounts.json").exists():
         raise RuntimeError(f"File 'accounts.json' not found. Login before playing {sys.argv[2]}")
 
-if __name__ == "__main__":
-    sys.argv += [None]*3
-    if sys.argv[1] == "launch" or sys.argv[1] == "l":
-        ensure_logged_in()
-        launch(sys.argv[2], sys.argv[3])
-    elif sys.argv[1] == "download" or sys.argv[1] == "d":
-        ensure_logged_in()
-        download(sys.argv[2])
-    elif sys.argv[1] == "login":
-        code = sys.argv[2]
-        if code is None:
-            raise ValueError("Expected code")
-        login(code)
-    elif sys.argv[1] == "accounts":
-        for account in json.loads(Path("accounts.json").read_text()):
-            print(account["uuid"], account["username"])
-    elif sys.argv[1] == "versions":
-        for p in Path("versions").iterdir():
-            if p.is_dir():
-                print(p.name)
-    elif sys.argv[1] == "manifest":
-        for version in json.load(urlopen(VERSIONS_MANIFEST_URL))["versions"]:
-            print(version["releaseTime"], version["id"])
-    elif sys.argv[1] == "refresh":
-        username_or_uuid = sys.argv[2]
-        accounts = json.loads(Path("accounts.json").read_text())
-        account = find_account(username_or_uuid, accounts)
-        check_if_account_information_changed(account, accounts)
-    else:
-        print(HELP)
+def refresh():
+    username_or_uuid = sys.argv[2]
+    accounts = json.loads(Path("accounts.json").read_text())
+    account = find_account(username_or_uuid, accounts)
+    check_if_account_information_changed(account, accounts)
+
+sys.argv += [None]*3
+if sys.argv[1] in {"login", "add", "run", "refresh"}:
+    globals()[sys.argv[1]]()
+else:
+    print(HELP)
