@@ -438,6 +438,8 @@ def run():
     game_args = version_manifest["minecraftArguments"].split() if "minecraftArguments" in version_manifest else version_manifest["arguments"]["game"]
     game_args = process_args(game_args)
 
+    os.chdir(instance_path)
+
     # arg order: jvm (json), jvm (non-json), logging (json), mainClass (json), game (json)
     args = [java_executable_path] + jvm_args + [version_manifest["mainClass"]] + game_args
     proc = subprocess.Popen(args)
