@@ -263,10 +263,15 @@ def add():
 def check_if_account_information_changed(account, accounts):
     def save_account():
         for e in accounts:
-            if e["microsoft_refresh_token"] == account["microsoft_refresh_token"]:
-                e["username"] = account["username"]
-                e["uuid"] = account["uuid"]
-                e["minecraft_token"] = account["minecraft_token"]
+            try:
+                match = e["microsoft_refresh_token"] == account["microsoft_refresh_token"]
+            except KeyError:
+                continue
+            else:
+                if match:
+                    e["username"] = account["username"]
+                    e["uuid"] = account["uuid"]
+                    e["minecraft_token"] = account["minecraft_token"]
         Path("accounts.json").write_text(json.dumps(accounts, indent=2))
 
     def account_information_changed():
